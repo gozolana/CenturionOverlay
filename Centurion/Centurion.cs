@@ -37,9 +37,6 @@ namespace Centurion
 
             // Register EventSource
             registry.StartEventSource(new CenturionEventSource(container));
-
-            // Register Overlay
-            registry.RegisterOverlay<CenturionOverlay>();
         }
     }
 }
