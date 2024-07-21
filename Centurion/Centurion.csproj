@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -64,22 +65,7 @@
   <ItemGroup>
     <Compile Include="Centurion.cs" />
     <Compile Include="CenturionEventSource.cs" />
-    <Compile Include="CenturionEventSourceConfig.cs" />
-    <Compile Include="CenturionEventSourceConfigPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="CenturionEventSourceConfigPanel.Designer.cs" />
-    <Compile Include="CenturionOverlay.cs" />
-    <Compile Include="CenturionOverlayConfig.cs" />
-    <Compile Include="CenturionOverlayConfigPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="CenturionOverlayConfigPanel.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="CenturionEventSourceConfigPanel.resx" />
-    <EmbeddedResource Include="CenturionOverlayConfigPanel.resx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
