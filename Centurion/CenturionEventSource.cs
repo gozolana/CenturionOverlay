@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Advanced_Combat_Tracker;
 using FFXIV_ACT_Plugin.Common;
+using FFXIV_ACT_Plugin.Common.Models;
 using Newtonsoft.Json.Linq;
 using RainbowMage.OverlayPlugin;
 using RainbowMage.OverlayPlugin.EventSources;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
-
-using PluginCombatant = FFXIV_ACT_Plugin.Common.Models.Combatant;
 
 namespace Centurion
 {
@@ -112,8 +109,6 @@ namespace Centurion
 
         private readonly FFXIVRepository repository;
 
-        private readonly ICombatantMemory combatantMemory;
-
         private readonly List<string> importedLogs = new List<string>();
 
         // キャラクターログイン
@@ -164,15 +159,9 @@ namespace Centurion
             Name = "CenturionES";
 
             var haveRepository = container.TryResolve(out repository);
-            var haveCombatantMemory = container.TryResolve(out combatantMemory);
             if (!haveRepository)
             {
                 Log(LogLevel.Warning, "Could not construct CenturionEventSource: missing repository");
-                return;
-            }
-            if (!haveCombatantMemory)
-            {
-                Log(LogLevel.Warning, "Could not construct CenturionEventSource: missing combatantMemory");
                 return;
             }
             
@@ -319,7 +308,7 @@ namespace Centurion
 
             try
             {
-                currentPlayer = combatantMemory.GetSelfCombatant();
+                currentPlayer = repository.GetCombatants().FirstOrDefault(c => c.type == 1);
                 if (currentPlayer != null)
                 {
                     disconnectStartTime = null;
@@ -371,7 +360,7 @@ namespace Centurion
                     destinationZoneInstanceName = "";
                 }
 
-                var allCombatants = combatantMemory.GetCombatantList();
+                var allCombatants = repository.GetCombatants();
                 currentZone.Update(currentTime, allCombatants);
             }
             catch (Exception e)
@@ -718,7 +707,7 @@ namespace Centurion
             public uint TargetID;
             public uint BNpcID;
             public uint BNpcNameID;
-            public ObjectType type;
+            public byte type;
 
             public BaseCombatant(Combatant combatant)
             {
@@ -728,7 +717,7 @@ namespace Centurion
                 this.TargetID = combatant.TargetID;
                 this.BNpcID = combatant.BNpcID;
                 this.BNpcNameID = combatant.BNpcNameID;
-                this.type = combatant.Type;
+                this.type = combatant.type;
             }
         }
 
@@ -746,7 +735,7 @@ namespace Centurion
                 this.PosY = combatant.PosY;
                 this.PosZ = combatant.PosZ;
                 this.Heading = combatant.Heading;
-                this.Distance = combatant.RawEffectiveDistance;
+                this.Distance = combatant.EffectiveDistance;
             }
         }
 
@@ -765,7 +754,7 @@ namespace Centurion
                 this.Job = combatant.Job;
                 this.Level = combatant.Level;
                 this.WorldID = combatant.WorldID;
-                this.WorldName = GetWorldName(combatant.WorldID);
+                this.WorldName = combatant.WorldName;
                 this.CurrentHP = combatant.CurrentHP;
                 this.MaxHP = combatant.MaxHP;
                 this.HPP = combatant.MaxHP > 0 ? (float)combatant.CurrentHP / (float)combatant.MaxHP : 0;
@@ -782,7 +771,6 @@ namespace Centurion
             public List<CharCombatant> party;
             public List<CharCombatant> pcs;
             public List<CharCombatant> targets;
-            public List<PosCombatant> aetherytes;
             public uint zoneId;
             public string zoneName;
             public int countPC;
@@ -791,6 +779,7 @@ namespace Centurion
             public int countPets;
             public int countTotal;
             public bool isCrowded;
+            // public List<PosCombatant> others;
         }
 
         internal void DispatchPlayerLoggedInEvent(DateTime utcDateTime, Combatant player, uint zoneId, string zoneName)
@@ -934,7 +923,7 @@ namespace Centurion
                 stateChanged.x = combatant.PosX;
                 stateChanged.y = combatant.PosY;
                 stateChanged.z = combatant.PosZ;
-                stateChanged.distance = (float)combatant.RawEffectiveDistance;
+                stateChanged.distance = (float)combatant.EffectiveDistance;
                 stateChanged.hpp = (float)combatant.CurrentHP / (float)combatant.MaxHP;
             }
             catch (Exception ex)
@@ -965,7 +954,7 @@ namespace Centurion
             DispatchEvent(JObject.FromObject(mobLocation));
         }
 
-        private bool IsPartyMember(PluginCombatant combatant)
+        private bool IsPartyMember(Combatant combatant)
         {
             // The PartyTypeEnum was renamed in 2.6.0.0 to work around that, we use reflection and cast the result to int.
             return (int)combatant.GetType().GetMethod("get_PartyType").Invoke(combatant, new object[] { }) == 1;
@@ -976,21 +965,18 @@ namespace Centurion
             var combatantData = new CenturionCombatDataObject();
             try
             {
-
                 var partyCombatantIds = repository.GetCombatants().Skip(1).Where(c => c.type == 1 && IsPartyMember(c)).Select(c => c.ID);
 
-                var countPC = combatants.Count(c => c.Type == ObjectType.PC);
-                var countNPC = combatants.Count(c => c.Type == ObjectType.NPC);
-                var countChocobos = combatants.Count(c => c.Type == ObjectType.NPC && c.OwnerID != 0 && c.BNpcID == 952);
-                var countPets = combatants.Count(c => c.Type == ObjectType.NPC && c.OwnerID != 0 && c.BNpcID != 952);
+                var countPC = combatants.Count(c => c.type == 1);
+                var countNPC = combatants.Count(c => c.type == 2);
+                var countChocobos = combatants.Count(c => c.type == 2 && c.OwnerID != 0 && c.BNpcID == 952);
+                var countPets = combatants.Count(c => c.type == 2 && c.OwnerID != 0 && c.BNpcID != 952);
 
                 combatantData.timestamp = utcDateTime.ToString("s") + "Z";
                 combatantData.self = combatants.Select(c => new CharCombatant(c)).FirstOrDefault();
-                combatantData.party = combatants.Where(c => partyCombatantIds.Contains(c.ID)).Select(c => new CharCombatant(c)).ToList();
-                // combatantData.party = repository.GetCombatants().ToList();
-                combatantData.pcs = combatants.Skip(1).Where(c => c.Type == ObjectType.PC).Select(c => new CharCombatant(c)).ToList();
+                combatantData.party = combatants.Skip(1).Where(c => IsPartyMember(c)).Select(c => new CharCombatant(c)).ToList();
+                combatantData.pcs = combatants.Skip(1).Where(c => c.type == 1).Select(c => new CharCombatant(c)).ToList();
                 combatantData.targets = zone.Mobs.Select(c => c.AsCharCombatant()).ToList();
-                combatantData.aetherytes = combatants.Where(c => c.Type == ObjectType.Aetheryte).Select(c => new PosCombatant(c)).ToList();
                 combatantData.zoneId = zone.ZoneId;
                 combatantData.zoneName = zone.ZoneName;
                 combatantData.countPC = countPC;
@@ -999,6 +985,7 @@ namespace Centurion
                 combatantData.countPets = countPets;
                 combatantData.countTotal = countPC + countNPC;
                 combatantData.isCrowded = isCrowded;
+                // combatantData.others = combatants.Where(c => c.BNpcNameID != 0).Select(c => new PosCombatant(c)).ToList();
             }
             catch (Exception ex)
             {
@@ -1031,12 +1018,12 @@ namespace Centurion
             public CharCombatant AsCharCombatant() => new CharCombatant(this.combatant);
 
             public bool CanBeRemoved { 
-                get => (combatant.CurrentHP == 0 || (float) combatant.RawEffectiveDistance > 100);
+                get => (combatant.CurrentHP == 0 || (float) combatant.EffectiveDistance > 100);
             }
 
             public void Update(DateTime utcTime, Combatant target)
             {
-                if (target.PosX == combatant.PosX && target.PosY == combatant.PosY && target.PosZ == combatant.PosZ && target.Heading == combatant.Heading && target.PCTargetID == 0 && (target.CurrentHP == target.MaxHP))
+                if (target.PosX == combatant.PosX && target.PosY == combatant.PosY && target.PosZ == combatant.PosZ && target.Heading == combatant.Heading && target.TargetID == 0 && (target.CurrentHP == target.MaxHP))
                 {
                     // フリーかつ前回と同じ位置
                     if (locationWatchStartTime != null)
@@ -1111,14 +1098,14 @@ namespace Centurion
 
             public IEnumerable<CenturionMob> Mobs { get => this.mobs; }
 
-            // PC と NPC の合計数が 5 Interval 連続で 100 を超えていた
+            // PC と NPC の合計数が 5 Interval 連続で 150 を超えていた
             public bool IsCrowded { get => (crowdedCount >= 5); }
 
             public void Update(DateTime utcDateTime, IList<Combatant> allCombatants)
             {
                 // 混み具合の判定
-                var countTotal = allCombatants.Count(c => c.Type == ObjectType.PC || c.Type == ObjectType.NPC);
-                crowdedCount = countTotal > 100 ? (crowdedCount + 1) : 0;
+                var countTotal = allCombatants.Count(c => c.type == 1 || c.type == 2);
+                crowdedCount = countTotal > 150 ? (crowdedCount + 1) : 0;
 
                 var targetCombatants = allCombatants.Where(c => mobIds.Contains(c.BNpcNameID)).ToList();
 
