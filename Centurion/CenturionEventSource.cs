@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using Advanced_Combat_Tracker;
 using FFXIV_ACT_Plugin.Common;
 using Newtonsoft.Json.Linq;
 using RainbowMage.OverlayPlugin;
 using RainbowMage.OverlayPlugin.EventSources;
-using RainbowMage.OverlayPlugin.MemoryProcessors;
 using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+
+using PluginCombatant = FFXIV_ACT_Plugin.Common.Models.Combatant;
 
 namespace Centurion
 {
@@ -108,6 +108,8 @@ namespace Centurion
             { 1192, new uint[] { 13437, 13435, 13436, 13154, 13155, 13406, 13407, 13049 } }
         };
 
+        private static Dictionary<uint, string> WORLDID_WORLDNAME_MAP = new Dictionary<uint, string>();
+
         private readonly FFXIVRepository repository;
 
         private readonly ICombatantMemory combatantMemory;
@@ -163,7 +165,6 @@ namespace Centurion
 
             var haveRepository = container.TryResolve(out repository);
             var haveCombatantMemory = container.TryResolve(out combatantMemory);
-
             if (!haveRepository)
             {
                 Log(LogLevel.Warning, "Could not construct CenturionEventSource: missing repository");
@@ -174,6 +175,8 @@ namespace Centurion
                 Log(LogLevel.Warning, "Could not construct CenturionEventSource: missing combatantMemory");
                 return;
             }
+            
+            WORLDID_WORLDNAME_MAP = new Dictionary<uint, string>(repository.GetResourceDictionary(ResourceType.WorldList_EN));
 
             // Register Events subscribe to other EventSources/Overlays
             RegisterEventTypes(new List<string>
@@ -225,7 +228,8 @@ namespace Centurion
                 // アセンブリ名 1.0.0.0
                 return new JObject
                 {
-                    ["version"] = $"{assembly.Name} {ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}"
+                    ["name"] = assembly.Name,
+                    ["version"] = $"{ver.Major}.{ver.Minor}.{ver.Build}.{ver.Revision}"
                 };
             });
 
@@ -302,7 +306,7 @@ namespace Centurion
             // timer.Change(-1, -1);
         }
 
-        private int count = 0;
+        // private int count = 0;
 
         /// <summary>
         /// This method is called periodically when using the embedded timer.
@@ -310,8 +314,8 @@ namespace Centurion
         protected override void Update()
         {
             var currentTime = DateTime.UtcNow;
-            count++;
-            count %= 100; // 0.1秒*100回=10秒
+            // count++;
+            // count %= 100; // 0.1秒*100回=10秒
 
             try
             {
@@ -370,10 +374,9 @@ namespace Centurion
                 var allCombatants = combatantMemory.GetCombatantList();
                 currentZone.Update(currentTime, allCombatants);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-
-                throw;
+                Log(LogLevel.Error, e.Message);
             }
         }
 
@@ -560,15 +563,7 @@ namespace Centurion
             return (zoneName, instance);
         }
 
-        private string GetWorldName(Combatant player)
-        {
-            string worldName = "Unknown";
-            if (player == null) return worldName;
-            var dict = repository.GetResourceDictionary(ResourceType.WorldList_EN);
-            if (dict == null) return worldName;
-            dict.TryGetValue(player.WorldID, out worldName);
-            return worldName;
-        }
+        private static string GetWorldName(uint worldId) => WORLDID_WORLDNAME_MAP.TryGetValue(worldId, out string worldName) ? worldName : "Unknown";
 
         private string ResolveCharacterName(string name)
         {
@@ -578,13 +573,14 @@ namespace Centurion
             {
                 return $"{m.Groups["firstName"]} {m.Groups["familyName"]}@{m.Groups["world"]}";
             }
+            string worldName = currentPlayer != null ? GetWorldName(currentPlayer.WorldID) : "Unknown";
             reg = new Regex(@"(?<firstName>[A-Z]\S*)\s(?<familyName>[A-Z]\S*)$", RegexOptions.Singleline);
             m = reg.Match(name);
             if (m.Success)
             {
-                return $"{m.Groups["firstName"]} {m.Groups["familyName"]}@{GetWorldName(currentPlayer)}";
+                return $"{m.Groups["firstName"]} {m.Groups["familyName"]}@{worldName}";
             }
-            return currentPlayer != null ? $"{currentPlayer.Name}@{GetWorldName(currentPlayer)}" : "Unknown @Unknown";
+            return currentPlayer != null ? $"{currentPlayer.Name}@{worldName}" : "Unknown@Unknown";
         }
 
         private void ValidateLocationNotified(DateTime utcDateTime, LogMessageChatType logType, string[] logLine)
@@ -714,11 +710,87 @@ namespace Centurion
         }
 
         [Serializable]
+        public class BaseCombatant
+        {
+            public uint ID;
+            public string Name;
+            public uint OwnerID;
+            public uint TargetID;
+            public uint BNpcID;
+            public uint BNpcNameID;
+            public ObjectType type;
+
+            public BaseCombatant(Combatant combatant)
+            {
+                this.ID = combatant.ID;
+                this.Name = combatant.Name;
+                this.OwnerID = combatant.OwnerID;
+                this.TargetID = combatant.TargetID;
+                this.BNpcID = combatant.BNpcID;
+                this.BNpcNameID = combatant.BNpcNameID;
+                this.type = combatant.Type;
+            }
+        }
+
+        [Serializable]
+        public class PosCombatant : BaseCombatant
+        {
+            public float PosX;
+            public float PosY;
+            public float PosZ;
+            public float Heading;
+            public float Distance;
+            public PosCombatant(Combatant combatant) : base(combatant)
+            {
+                this.PosX = combatant.PosX;
+                this.PosY = combatant.PosY;
+                this.PosZ = combatant.PosZ;
+                this.Heading = combatant.Heading;
+                this.Distance = combatant.RawEffectiveDistance;
+            }
+        }
+
+        [Serializable]
+        public class CharCombatant : PosCombatant
+        {
+            public int Job;
+            public int Level;
+            public uint WorldID;
+            public string WorldName;
+            public float CurrentHP;
+            public float MaxHP;
+            public float HPP;
+            public CharCombatant(Combatant combatant) : base(combatant)
+            {
+                this.Job = combatant.Job;
+                this.Level = combatant.Level;
+                this.WorldID = combatant.WorldID;
+                this.WorldName = GetWorldName(combatant.WorldID);
+                this.CurrentHP = combatant.CurrentHP;
+                this.MaxHP = combatant.MaxHP;
+                this.HPP = combatant.MaxHP > 0 ? (float)combatant.CurrentHP / (float)combatant.MaxHP : 0;
+            }
+        }
+    
+
+        [Serializable]
         internal class CenturionCombatDataObject
         {
             public string type = CenturionCombatData;
             public string timestamp;
-            // TODO
+            public CharCombatant self;
+            public List<CharCombatant> party;
+            public List<CharCombatant> pcs;
+            public List<CharCombatant> targets;
+            public List<PosCombatant> aetherytes;
+            public uint zoneId;
+            public string zoneName;
+            public int countPC;
+            public int countNPC;
+            public int countChocobos;
+            public int countPets;
+            public int countTotal;
+            public bool isCrowded;
         }
 
         internal void DispatchPlayerLoggedInEvent(DateTime utcDateTime, Combatant player, uint zoneId, string zoneName)
@@ -893,6 +965,49 @@ namespace Centurion
             DispatchEvent(JObject.FromObject(mobLocation));
         }
 
+        private bool IsPartyMember(PluginCombatant combatant)
+        {
+            // The PartyTypeEnum was renamed in 2.6.0.0 to work around that, we use reflection and cast the result to int.
+            return (int)combatant.GetType().GetMethod("get_PartyType").Invoke(combatant, new object[] { }) == 1;
+        }
+
+        internal void DispatchCombantantData(DateTime utcDateTime, CenturionZone zone, IList<Combatant> combatants, bool isCrowded)
+        {
+            var combatantData = new CenturionCombatDataObject();
+            try
+            {
+
+                var partyCombatantIds = repository.GetCombatants().Skip(1).Where(c => c.type == 1 && IsPartyMember(c)).Select(c => c.ID);
+
+                var countPC = combatants.Count(c => c.Type == ObjectType.PC);
+                var countNPC = combatants.Count(c => c.Type == ObjectType.NPC);
+                var countChocobos = combatants.Count(c => c.Type == ObjectType.NPC && c.OwnerID != 0 && c.BNpcID == 952);
+                var countPets = combatants.Count(c => c.Type == ObjectType.NPC && c.OwnerID != 0 && c.BNpcID != 952);
+
+                combatantData.timestamp = utcDateTime.ToString("s") + "Z";
+                combatantData.self = combatants.Select(c => new CharCombatant(c)).FirstOrDefault();
+                combatantData.party = combatants.Where(c => partyCombatantIds.Contains(c.ID)).Select(c => new CharCombatant(c)).ToList();
+                // combatantData.party = repository.GetCombatants().ToList();
+                combatantData.pcs = combatants.Skip(1).Where(c => c.Type == ObjectType.PC).Select(c => new CharCombatant(c)).ToList();
+                combatantData.targets = zone.Mobs.Select(c => c.AsCharCombatant()).ToList();
+                combatantData.aetherytes = combatants.Where(c => c.Type == ObjectType.Aetheryte).Select(c => new PosCombatant(c)).ToList();
+                combatantData.zoneId = zone.ZoneId;
+                combatantData.zoneName = zone.ZoneName;
+                combatantData.countPC = countPC;
+                combatantData.countNPC = countNPC;
+                combatantData.countChocobos = countChocobos;
+                combatantData.countPets = countPets;
+                combatantData.countTotal = countPC + countNPC;
+                combatantData.isCrowded = isCrowded;
+            }
+            catch (Exception ex)
+            {
+                this.logger.Log(LogLevel.Error, "DispatchCombantantData: {0}", ex);
+            }
+            DispatchEvent(JObject.FromObject(combatantData));
+        }
+
+
         internal class CenturionMob
         {
             private readonly CenturionZone zone;
@@ -912,6 +1027,8 @@ namespace Centurion
             }
             public uint Id { get => combatant.ID; }
             public uint MobId { get => combatant.BNpcNameID; }
+
+            public CharCombatant AsCharCombatant() => new CharCombatant(this.combatant);
 
             public bool CanBeRemoved { 
                 get => (combatant.CurrentHP == 0 || (float) combatant.RawEffectiveDistance > 100);
@@ -1000,11 +1117,7 @@ namespace Centurion
             public void Update(DateTime utcDateTime, IList<Combatant> allCombatants)
             {
                 // 混み具合の判定
-                var countPC = allCombatants.Count(c => c.Type == ObjectType.PC);
-                var countNPC = allCombatants.Count(c => c.Type == ObjectType.NPC);
-                var countChocobos = allCombatants.Count(c => c.Type == ObjectType.NPC && c.OwnerID != 0 && c.BNpcID == 952);
-                var countPets = allCombatants.Count(c => c.Type == ObjectType.NPC && c.OwnerID != 0 && c.BNpcID != 952);
-                var countTotal = countPC + countNPC;
+                var countTotal = allCombatants.Count(c => c.Type == ObjectType.PC || c.Type == ObjectType.NPC);
                 crowdedCount = countTotal > 100 ? (crowdedCount + 1) : 0;
 
                 var targetCombatants = allCombatants.Where(c => mobIds.Contains(c.BNpcNameID)).ToList();
@@ -1029,14 +1142,8 @@ namespace Centurion
                 targetCombatants.Where(c => c.CurrentHP > 0).ToList().ForEach(c =>
                     mobs.Add(new CenturionMob(this, utcDateTime, c))
                 );
-                /*
-                var self = allCombatants.FirstOrDefault(c => c.type == 1);
-                var party = allCombatants.Skip(1).Where(c => c.type == 1 && (int)c.PartyType == 2).Select(c => new CharCombatant(c)).ToArray();
-                var pcs = allCombatants.Skip(1).Where(c => c.type == 1).Select(c => new CharCombatant(c)).ToArray(); //  && c.ID != 0
-                var targets = mobs.Select(mob => mob.combatant).ToArray();
-                var aetherytes = allCombatants.Where(c => c.type == 5).Select(c => new PosCombatant(c)).ToArray(); //  && c.ID != 0
-                */
 
+                EventSource.DispatchCombantantData(utcDateTime, this, allCombatants, IsCrowded);
             }
 
             public void Dispose(DateTime utcDateTime)
