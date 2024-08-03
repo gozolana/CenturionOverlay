@@ -148,7 +148,6 @@ namespace Centurion
 
         private DateTime? disconnectStartTime = null;
 
-
         public BuiltinEventConfig Config { get; set; }
 
         // Original Timer
@@ -164,7 +163,7 @@ namespace Centurion
                 Log(LogLevel.Warning, "Could not construct CenturionEventSource: missing repository");
                 return;
             }
-            
+
             WORLDID_WORLDNAME_MAP = new Dictionary<uint, string>(repository.GetResourceDictionary(ResourceType.WorldList_EN));
 
             // Register Events subscribe to other EventSources/Overlays
@@ -190,7 +189,6 @@ namespace Centurion
             // Register EventHandler
             // This EventHandler is called from other EventSources/Overlays
             // You can execute some process or response data.
-
             RegisterEventHandler("CenturionSay", (msg) =>
             {
                 var text = msg["text"]?.ToString();
@@ -243,6 +241,32 @@ namespace Centurion
                 };
             });
 
+            RegisterEventHandler("CenturionSetZoneMobs", (msg) =>
+            {
+                try
+                {
+                    foreach (KeyValuePair<string, JToken> item in (JObject)msg["data"])
+                    {
+                        try
+                        {
+                            uint key = UInt32.Parse(item.Key);
+                            uint[] mobids = ((JArray)item.Value).ToObject<uint[]>();
+                            ZONE_MOBIDS_MAP[key] = mobids;
+                            Log(LogLevel.Info, $"CenturionSetZoneMobs: {key} = {mobids.Select(mobid => mobid.ToString()).ToArray()}");
+                        }
+                        catch (Exception e)
+                        {
+                            Log(LogLevel.Warning, $"CenturionSetZoneMobs: ignore key {item.Key}, reason = {e.Message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log(LogLevel.Error, $"CenturionSetZoneMobs: {e.Message}");
+                }
+                return null;
+            });
+
             ActGlobals.oFormActMain.BeforeLogLineRead += LogLineHandler;
         }
 
@@ -275,11 +299,11 @@ namespace Centurion
             };
             originalTimer.Elapsed += (obj, args) =>
             {
-                this.Update();
+                Update();
             };
             originalTimer.Start();
 
-            this.Log(LogLevel.Info, "Plugin Started.");
+            Log(LogLevel.Info, "Plugin Started.");
         }
 
         public override void Stop()
@@ -287,7 +311,7 @@ namespace Centurion
             // Stop original timer
             originalTimer.Stop();
 
-            this.Log(LogLevel.Info, "Plugin Stopped.");
+            Log(LogLevel.Info, "Plugin Stopped.");
 
             // Stop the embedded timer when using it.
             // Call base.stop() or timer.Change(-1, -1) to stop the embedded timer manually.
@@ -295,16 +319,9 @@ namespace Centurion
             // timer.Change(-1, -1);
         }
 
-        // private int count = 0;
-
-        /// <summary>
-        /// This method is called periodically when using the embedded timer.
-        /// </summary>
         protected override void Update()
         {
             var currentTime = DateTime.UtcNow;
-            // count++;
-            // count %= 100; // 0.1秒*100回=10秒
 
             try
             {
@@ -324,13 +341,13 @@ namespace Centurion
                 }
                 else if (currentZone != null)
                 {
-                    // ログイン状態で3秒間接続が切れていたらログアウトに切り替える
-                    if (this.disconnectStartTime != null)
+                    // ログイン状態で3秒間接続が切れていた(Combatantsが取れなかった)らログアウトに切り替える
+                    if (disconnectStartTime != null)
                     {
-                        var elapsedTime = currentTime - (DateTime)this.disconnectStartTime;
+                        var elapsedTime = currentTime - (DateTime)disconnectStartTime;
                         if (elapsedTime.TotalSeconds > 3)
                         {
-                            DispatchPlayerLoggedOutEvent(currentTime);
+                            DispatchPlayerLoggedOutEvent(currentTime, currentPlayer, currentZone);
                             destinationZoneId = 0;
                             destinationZoneName = "";
                             currentPlayer = null;
@@ -340,20 +357,23 @@ namespace Centurion
                     }
                     else
                     {
-                        this.disconnectStartTime = currentTime;
+                        disconnectStartTime = currentTime;
                     }
                 }
 
+                // 必要な情報が揃っわなければ、この回の残処理はスキップ
                 if (currentPlayer == null || currentZone == null) return;
 
                 if (currentZone.ZoneId != destinationZoneId)
                 {
+                    // Zone変更
                     currentZone.Dispose(currentTime);
                     currentZone = new CenturionZone(this, currentPlayer.CurrentWorldID, destinationZoneId, destinationZoneName);
                 }
 
                 if (destinationZoneInstance > 0)
                 {
+                    // インスタンス変更
                     DispatchZoneInstanceChangedEvent(currentTime, destinationZoneInstance, destinationZoneInstanceName);
                     currentZone.CurrentInstance = destinationZoneInstance;
                     destinationZoneInstance = 0;
@@ -608,6 +628,12 @@ namespace Centurion
         {
             public string type = CenturionPlayerLoggedOutEvent;
             public string timestamp;
+            public uint playerId;
+            public string playerName;
+            public uint playerWorldId;
+            public uint worldId;
+            public uint zoneId;
+            public string zoneName;
         }
 
         [Serializable]
@@ -711,13 +737,13 @@ namespace Centurion
 
             public BaseCombatant(Combatant combatant)
             {
-                this.ID = combatant.ID;
-                this.Name = combatant.Name;
-                this.OwnerID = combatant.OwnerID;
-                this.TargetID = combatant.TargetID;
-                this.BNpcID = combatant.BNpcID;
-                this.BNpcNameID = combatant.BNpcNameID;
-                this.type = combatant.type;
+                ID = combatant.ID;
+                Name = combatant.Name;
+                OwnerID = combatant.OwnerID;
+                TargetID = combatant.TargetID;
+                BNpcID = combatant.BNpcID;
+                BNpcNameID = combatant.BNpcNameID;
+                type = combatant.type;
             }
         }
 
@@ -731,11 +757,11 @@ namespace Centurion
             public float Distance;
             public PosCombatant(Combatant combatant) : base(combatant)
             {
-                this.PosX = combatant.PosX;
-                this.PosY = combatant.PosY;
-                this.PosZ = combatant.PosZ;
-                this.Heading = combatant.Heading;
-                this.Distance = combatant.EffectiveDistance;
+                PosX = combatant.PosX;
+                PosY = combatant.PosY;
+                PosZ = combatant.PosZ;
+                Heading = combatant.Heading;
+                Distance = combatant.EffectiveDistance;
             }
         }
 
@@ -751,16 +777,16 @@ namespace Centurion
             public float HPP;
             public CharCombatant(Combatant combatant) : base(combatant)
             {
-                this.Job = combatant.Job;
-                this.Level = combatant.Level;
-                this.WorldID = combatant.WorldID;
-                this.WorldName = combatant.WorldName;
-                this.CurrentHP = combatant.CurrentHP;
-                this.MaxHP = combatant.MaxHP;
-                this.HPP = combatant.MaxHP > 0 ? (float)combatant.CurrentHP / (float)combatant.MaxHP : 0;
+                Job = combatant.Job;
+                Level = combatant.Level;
+                WorldID = combatant.WorldID;
+                WorldName = combatant.WorldName;
+                CurrentHP = combatant.CurrentHP;
+                MaxHP = combatant.MaxHP;
+                HPP = combatant.MaxHP > 0 ? (float)combatant.CurrentHP / (float)combatant.MaxHP : 0;
             }
         }
-    
+
 
         [Serializable]
         internal class CenturionCombatDataObject
@@ -784,91 +810,104 @@ namespace Centurion
 
         internal void DispatchPlayerLoggedInEvent(DateTime utcDateTime, Combatant player, uint zoneId, string zoneName)
         {
-            var playerLoggedIn = new CenturionPlayerLoggedInObject();
+            var eventObject = new CenturionPlayerLoggedInObject();
             try
             {
-                playerLoggedIn.timestamp = utcDateTime.ToString("s") + "Z";
-                playerLoggedIn.playerId = player.ID;
-                playerLoggedIn.playerName = player.Name;
-                playerLoggedIn.playerWorldId = player.WorldID;
-                playerLoggedIn.worldId = player.CurrentWorldID;
-                playerLoggedIn.zoneId = zoneId;
-                playerLoggedIn.zoneName = zoneName;
+                eventObject.timestamp = utcDateTime.ToString("s") + "Z";
+                eventObject.playerId = player.ID;
+                eventObject.playerName = player.Name;
+                eventObject.playerWorldId = player.WorldID;
+                eventObject.worldId = player.CurrentWorldID;
+                eventObject.zoneId = zoneId;
+                eventObject.zoneName = zoneName;
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchPlayerLoggedInEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchPlayerLoggedInEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(playerLoggedIn));
+            DispatchEvent(JObject.FromObject(eventObject));
+            logger.Log(LogLevel.Info, $"PlayerLoggedIn: {player.Name}@{player.WorldName}");
         }
 
-        internal void DispatchPlayerLoggedOutEvent(DateTime utcDateTime)
+        internal void DispatchPlayerLoggedOutEvent(DateTime utcDateTime, Combatant player, CenturionZone zone)
         {
-            var playerLoggedOut = new CenturionPlayerLoggedOutObject();
+            var eventObject = new CenturionPlayerLoggedOutObject();
             try
             {
-                playerLoggedOut.timestamp = utcDateTime.ToString("s") + "Z";
+                eventObject.timestamp = utcDateTime.ToString("s") + "Z";
+                eventObject.playerId = player.ID;
+                eventObject.playerName = player.Name;
+                eventObject.playerWorldId = player.WorldID;
+                eventObject.worldId = player.CurrentWorldID;
+                eventObject.zoneId = zone.ZoneId;
+                eventObject.zoneName = zone.ZoneName;
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchPlayerLoggedOutEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchPlayerLoggedOutEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(playerLoggedOut));
+            DispatchEvent(JObject.FromObject(eventObject));
+            logger.Log(LogLevel.Info, $"PlayerLoggedOut: {player.Name}@{player.WorldName}");
         }
 
         internal void DispatchZoneChangedEvent(DateTime utcDateTime, uint worldId, uint zoneId, string zoneName)
         {
-            var zoneChanged = new CenturionZoneChangedObject();
+            var eventObject = new CenturionZoneChangedObject();
             try
             {
-                zoneChanged.timestamp = utcDateTime.ToString("s") + "Z";
-                zoneChanged.worldId = worldId;
-                zoneChanged.zoneId = zoneId;
-                zoneChanged.zoneName = zoneName;
+                eventObject.timestamp = utcDateTime.ToString("s") + "Z";
+                eventObject.worldId = worldId;
+                eventObject.zoneId = zoneId;
+                eventObject.zoneName = zoneName;
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchZoneChangedEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchZoneChangedEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(zoneChanged));
+            DispatchEvent(JObject.FromObject(eventObject));
+            logger.Log(LogLevel.Info, $"ZoneChanged: {WORLDID_WORLDNAME_MAP[worldId]}({worldId}) - {zoneName}({zoneId})");
         }
 
         internal void DispatchZoneInstanceChangedEvent(DateTime utcDateTime, uint instance, string zoneName)
         {
-            var instanceChanged = new CenturionZoneInstanceChangedObject();
+            var eventObject = new CenturionZoneInstanceChangedObject();
             try
             {
-                instanceChanged.timestamp = utcDateTime.ToString("s") + "Z";
-                instanceChanged.instance = instance;
-                instanceChanged.zoneName = zoneName;
+                eventObject.timestamp = utcDateTime.ToString("s") + "Z";
+                eventObject.instance = instance;
+                eventObject.zoneName = zoneName;
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchZoneInstanceChangedEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchZoneInstanceChangedEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(instanceChanged));
+            DispatchEvent(JObject.FromObject(eventObject));
+            logger.Log(LogLevel.Info, $"ZoneInstanceChanged: {zoneName} {instance}");
         }
 
         internal void DispatchLocationNotifiedEvent(DateTime utcDateTime, LogMessageChatType logType, string message, string pc, string zoneName, uint instance, float x, float y)
         {
-            var locationNotified = new CenturionLocationNotifiedObject();
+            var eventObject = new CenturionLocationNotifiedObject();
             try
             {
-                locationNotified.timestamp = utcDateTime.ToString("s") + "Z";
-                locationNotified.logType = (uint)logType;
-                locationNotified.message = message;
-                locationNotified.pc = pc;
-                locationNotified.zoneName = zoneName;
-                locationNotified.instance = instance;
-                locationNotified.x = x;
-                locationNotified.y = y;
+                eventObject.timestamp = utcDateTime.ToString("s") + "Z";
+                eventObject.logType = (uint)logType;
+                eventObject.message = message;
+                eventObject.pc = pc;
+                eventObject.zoneName = zoneName;
+                eventObject.instance = instance;
+                eventObject.x = x;
+                eventObject.y = y;
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchLocationNotifiedEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchLocationNotifiedEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(locationNotified));
-
+            DispatchEvent(JObject.FromObject(eventObject));
+            string logMessage = instance == 0
+                ? $"LocationNotified: {pc} => {zoneName}({x},{y})"
+                : $"LocationNotified: {pc} => {zoneName} {instance} ({x},{y})";
+            logger.Log(LogLevel.Info, logMessage);
         }
 
         internal void DispatchMobFAEvent(DateTime utcDateTime, string attackerName, string actionName, CenturionMob mob, string mobName)
@@ -886,9 +925,10 @@ namespace Centurion
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchMobFAEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchMobFAEvent: {0}", ex);
             }
             DispatchEvent(JObject.FromObject(mobFA));
+            logger.Log(LogLevel.Info, mobFA.message);
         }
 
         internal void DispatchMobTriggerEvent(DateTime utcDateTime, string triggerType, string message, CenturionZone zone)
@@ -904,9 +944,10 @@ namespace Centurion
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchMobTriggerEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchMobTriggerEvent: {0}", ex);
             }
             DispatchEvent(JObject.FromObject(trigger));
+            logger.Log(LogLevel.Info, trigger.message);
         }
 
         internal void DispatchMobStateChangedEvent(DateTime utcDateTime, string state, CenturionZone zone, Combatant combatant)
@@ -928,7 +969,7 @@ namespace Centurion
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "MobStateChangedEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "MobStateChangedEvent: {0}", ex);
             }
             DispatchEvent(JObject.FromObject(stateChanged));
         }
@@ -949,7 +990,7 @@ namespace Centurion
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchMobLocationEvent: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchMobLocationEvent: {0}", ex);
             }
             DispatchEvent(JObject.FromObject(mobLocation));
         }
@@ -989,7 +1030,7 @@ namespace Centurion
             }
             catch (Exception ex)
             {
-                this.logger.Log(LogLevel.Error, "DispatchCombantantData: {0}", ex);
+                logger.Log(LogLevel.Error, "DispatchCombantantData: {0}", ex);
             }
             DispatchEvent(JObject.FromObject(combatantData));
         }
@@ -1015,10 +1056,11 @@ namespace Centurion
             public uint Id { get => combatant.ID; }
             public uint MobId { get => combatant.BNpcNameID; }
 
-            public CharCombatant AsCharCombatant() => new CharCombatant(this.combatant);
+            public CharCombatant AsCharCombatant() => new CharCombatant(combatant);
 
-            public bool CanBeRemoved { 
-                get => (combatant.CurrentHP == 0 || (float) combatant.EffectiveDistance > 100);
+            public bool CanBeRemoved
+            {
+                get => (combatant.CurrentHP == 0 || (float)combatant.EffectiveDistance > 100);
             }
 
             public void Update(DateTime utcTime, Combatant target)
@@ -1086,17 +1128,20 @@ namespace Centurion
 
             public CenturionZone(CenturionEventSource eventSource, uint worldId, uint zoneId, string zoneName)
             {
-                this.EventSource = eventSource;
-                this.WorldId = worldId;
-                this.ZoneId = zoneId;
-                this.ZoneName = zoneName;
-                this.CurrentInstance = 0;
+                EventSource = eventSource;
+                WorldId = worldId;
+                ZoneId = zoneId;
+                ZoneName = zoneName;
+                CurrentInstance = 0;
 
-                ZONE_MOBIDS_MAP.TryGetValue(zoneId, out this.mobIds);
-                this.EventSource.DispatchZoneChangedEvent(DateTime.UtcNow, worldId, zoneId, zoneName);
+                if (!ZONE_MOBIDS_MAP.TryGetValue(zoneId, out mobIds))
+                {
+                    mobIds = new uint[0];
+                }
+                EventSource.DispatchZoneChangedEvent(DateTime.UtcNow, worldId, zoneId, zoneName);
             }
 
-            public IEnumerable<CenturionMob> Mobs { get => this.mobs; }
+            public IEnumerable<CenturionMob> Mobs { get => mobs; }
 
             // PC と NPC の合計数が 5 Interval 連続で 150 を超えていた
             public bool IsCrowded { get => (crowdedCount >= 5); }
