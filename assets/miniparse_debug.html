@@ -62,35 +62,28 @@
         document.documentElement.classList.remove('resizeHandle')
       }
 
-      // CombatData イベントを購読
-      addOverlayListener('CombatData', (e) => {
-        document.querySelector('#encounter').innerText = JSON.stringify(
-          e,
-          null,
-          4
-        )
-      })
-
       addOverlayListener('CenturionPlayerLoggedInEvent', (ev) =>
-        console.log(ev)
+        console.assert(ev)
       )
       addOverlayListener('CenturionPlayerLoggedOutEvent', (ev) =>
-        console.log(ev)
+        console.assert(ev)
       )
-      addOverlayListener('CenturionZoneChangedEvent', (ev) => console.log(ev))
+      addOverlayListener('CenturionZoneChangedEvent', (ev) =>
+        console.assert(ev)
+      )
       addOverlayListener('CenturionZoneInstanceChangedEvent', (ev) =>
-        console.log(ev)
+        console.assert(ev)
       )
       addOverlayListener('CenturionLocationNotifiedEvent', (ev) =>
-        console.log(ev)
+        console.assert(ev)
       )
-      addOverlayListener('CenturionMobFAEvent', (ev) => console.log(ev))
-      addOverlayListener('CenturionMobTriggerEvent', (ev) => console.log(ev))
+      addOverlayListener('CenturionMobFAEvent', (ev) => console.assert(ev))
+      addOverlayListener('CenturionMobTriggerEvent', (ev) => console.assert(ev))
       addOverlayListener('CenturionMobStateChangedEvent', (ev) =>
-        console.log(ev)
+        console.assert(ev)
       )
       addOverlayListener('CenturionMobLocationEvent', (ev) => {
-        console.log(ev)
+        console.assert(ev)
         document.querySelector('#mobLocation').innerText = JSON.stringify(
           ev,
           null,
@@ -108,7 +101,11 @@
       startOverlayEvents()
 
       callOverlayHandler({ call: 'CenturionInitClient' }).then((obj) =>
-        console.log(obj)
+        console.assert(obj)
+      )
+
+      callOverlayHandler({ call: 'CenturionInitClient' }).then((obj) =>
+        console.assert(obj)
       )
     </script>
   </head>
