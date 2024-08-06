@@ -993,6 +993,7 @@ namespace Centurion
                 logger.Log(LogLevel.Error, "DispatchMobLocationEvent: {0}", ex);
             }
             DispatchEvent(JObject.FromObject(mobLocation));
+            logger.Log(LogLevel.Info, $"MobLocation: {zone.ZoneId} {combatant.BNpcNameID}");
         }
 
         private bool IsPartyMember(Combatant combatant)
