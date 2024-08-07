@@ -207,7 +207,7 @@ const drawEliteSymbols = (context: CanvasRenderingContext2D) => {
 }
 
 const drawSSSymbols = (context: CanvasRenderingContext2D) => {
-  if (useOverlaySettingsStore().displaySS != 0) {
+  if (useOverlaySettingsStore().displaySS) {
     return
   }
   zone.value?.ss?.locations.forEach(loc => {
@@ -585,6 +585,8 @@ const drawCanvas = async () => {
 }
 
 onMounted(() => {
+  window.addEventListener('resize', onResize)
+  onResize()
   if (canvas.value) {
     canvas.value.addEventListener('wheel', handleWheel)
   }
@@ -592,6 +594,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
   if (canvas.value) {
     canvas.value.removeEventListener('wheel', handleWheel)
   }
@@ -753,7 +756,7 @@ const getEdgePosition = (
 <template>
   <div>
     <overlay-canvas-header></overlay-canvas-header>
-    <div id="canvasWrapper" v-resize="onResize">
+    <div id="canvasWrapper">
       <canvas
         ref="canvas"
         :width="canvasSize"
@@ -764,9 +767,9 @@ const getEdgePosition = (
         {{ store.dump }}
       </div>
       <div id="fieldInstance" 
-        v-if="store.instanceIcon"
+        v-if="store.instance > 0"
         :style="{ color: textColor }">
-        <v-icon large :icon="store.instanceIcon"></v-icon>
+        <span class="material-icons-outlined">filter_{{store.instance}}</span>
       </div>
       <!--div id="specifiedLocation">
         <location-map></location-map>
@@ -781,7 +784,7 @@ const getEdgePosition = (
       </div-->
     </div>
     <div id="resizeCorner" :style="{ color: textColor, top: resizeIconTop }">
-      <v-icon size="50" icon="mdi-resize-bottom-right"></v-icon>
+      <!--v-icon size="50" icon="mdi-resize-bottom-right"></v-icon-->
     </div>
   </div>
 </template>

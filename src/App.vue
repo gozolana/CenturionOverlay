@@ -8,12 +8,12 @@ onBeforeUnmount(() => disconnect())
 </script>
 
 <template>
+
   <div class="main"><Overlay/></div>
   <div class="info">
-    Hellooooosssss
+    Notification
   </div>
-  <div class="handle">
-  </div>
+  <div class="handle"></div>
 </template>
 
 <style lang="scss">
@@ -44,7 +44,7 @@ div.info {
   margin: 20px;
 
   z-index: 2;
-  background-color: blue;
+  background-color: transparent;
 }
 div.handle {
   position: relative;
@@ -57,5 +57,4 @@ div.handle {
   background-position: bottom right;
   background-repeat: no-repeat;
 }
-
 </style>
