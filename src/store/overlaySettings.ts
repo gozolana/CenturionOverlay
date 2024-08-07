@@ -63,46 +63,34 @@ export const useOverlaySettingsStore = defineStore(
 
     const flagRanks = ref(0x3f) // 0b111111 -> SS, S, A1, A2, B1, B2
     const displaySS = computed({
-      get: () => (flagRanks.value & (1 << 5) ? 0 : undefined),
-      set: (value: number | undefined) =>
-        value === 0
-          ? (flagRanks.value |= 1 << 5)
-          : (flagRanks.value &= ~(1 << 5))
+      get: () => (flagRanks.value & (1 << 5)) > 0,
+      set: (value: boolean) =>
+        value ? (flagRanks.value |= 1 << 5) : (flagRanks.value &= ~(1 << 5))
     })
     const displayS = computed({
-      get: () => (flagRanks.value & (1 << 4) ? 0 : undefined),
-      set: (value: number | undefined) =>
-        value === 0
-          ? (flagRanks.value |= 1 << 4)
-          : (flagRanks.value &= ~(1 << 4))
+      get: () => (flagRanks.value & (1 << 4)) > 0,
+      set: (value: boolean) =>
+        value ? (flagRanks.value |= 1 << 4) : (flagRanks.value &= ~(1 << 4))
     })
     const displayA = computed({
-      get: () => (flagRanks.value & (1 << 3) ? 0 : undefined),
-      set: (value: number | undefined) =>
-        value === 0
-          ? (flagRanks.value |= 1 << 3)
-          : (flagRanks.value &= ~(1 << 3))
+      get: () => (flagRanks.value & (1 << 3)) > 0,
+      set: (value: boolean) =>
+        value ? (flagRanks.value |= 1 << 3) : (flagRanks.value &= ~(1 << 3))
     })
     const displayA2 = computed({
-      get: () => (flagRanks.value & (1 << 2) ? 0 : undefined),
-      set: (value: number | undefined) =>
-        value === 0
-          ? (flagRanks.value |= 1 << 2)
-          : (flagRanks.value &= ~(1 << 2))
+      get: () => (flagRanks.value & (1 << 2)) > 0,
+      set: (value: boolean) =>
+        value ? (flagRanks.value |= 1 << 2) : (flagRanks.value &= ~(1 << 2))
     })
     const displayB = computed({
-      get: () => (flagRanks.value & (1 << 1) ? 0 : undefined),
-      set: (value: number | undefined) =>
-        value === 0
-          ? (flagRanks.value |= 1 << 1)
-          : (flagRanks.value &= ~(1 << 1))
+      get: () => (flagRanks.value & (1 << 1)) > 0,
+      set: (value: boolean) =>
+        value ? (flagRanks.value |= 1 << 1) : (flagRanks.value &= ~(1 << 1))
     })
     const displayB2 = computed({
-      get: () => (flagRanks.value & (1 << 0) ? 0 : undefined),
-      set: (value: number | undefined) =>
-        value === 0
-          ? (flagRanks.value |= 1 << 0)
-          : (flagRanks.value &= ~(1 << 0))
+      get: () => (flagRanks.value & (1 << 0)) > 0,
+      set: (value: boolean) =>
+        value ? (flagRanks.value |= 1 << 0) : (flagRanks.value &= ~(1 << 0))
     })
 
     return {
