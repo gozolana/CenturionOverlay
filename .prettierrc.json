@@ -4,5 +4,7 @@
   "singleQuote": true,
   "trailingComma": "none",
   "semi": false,
-  "parser": "typescript"
+  "parser": "typescript",
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindConfig": "./tailwind.config.js"
 }
