@@ -45,7 +45,7 @@ export const useOverlayStore = defineStore('overlay', () => {
   const lastNotifiedLocation = ref<IMapLocation>({ zoneId: 0, x: 0, y: 0 })
 
   const instanceIcon = computed(() =>
-    instance.value > 0 ? `mdi-numeric-${instance.value}-box` : null
+    instance.value > 0 ? `filter_${instance.value}` : null
   )
 
   const onPlayerLoggedIn = async (event: IPlayerLoggedInEvent) => {
