@@ -5,7 +5,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { usePerformanceCounter } from '../composables/performanceCounter'
 import { useOverlayStore } from '../store/overlay'
 import { useOverlaySettingsStore } from '../store/overlaySettings'
-import OverlayCanvasHeader from './MobSelectHeader.vue'
 
 interface IPosition {
   x: number
@@ -107,18 +106,18 @@ const drawDetection = (context: CanvasRenderingContext2D) => {
 const drawSymbols = (context: CanvasRenderingContext2D) => {
   // see: ffxiv-lib/src/assets/icons/preview.htm for symbols
   zone.value?.markers
-    .filter(marker =>
+    .filter((marker) =>
       [
         IconId.Aetheryte,
         '060441',
         '060446',
         '060447',
         '060456',
-        '060467',
+        '060467'
       ].includes(marker.icon.substring(0, 6))
     )
     .sort((a, b) => a.y - b.y)
-    .forEach(marker => {
+    .forEach((marker) => {
       const icon = IconProvider.findIcon(marker.icon)
       if (icon && icon.complete && icon.width != 0 && icon.height != 0) {
         //console.log(marker.icon, icon.complete, icon.width, icon.height)
@@ -145,12 +144,12 @@ const drawTargetsBackground = (
     color: string
   }[] = []
 
-  store.targets.forEach(target => {
+  store.targets.forEach((target) => {
     const indices = zone.value?.getEliteLocationIndices(target, 0x1f, 3.0)
     if (indices && indices.length > 0) {
       indexAndColors.push({
         index: indices[0],
-        color: zone.value!.getMobColors(target.bNpcNameId)[1],
+        color: zone.value!.getMobColors(target.bNpcNameId)[1]
       })
     }
   })
@@ -210,7 +209,7 @@ const drawSSSymbols = (context: CanvasRenderingContext2D) => {
   if (useOverlaySettingsStore().displaySS) {
     return
   }
-  zone.value?.ss?.locations.forEach(loc => {
+  zone.value?.ss?.locations.forEach((loc) => {
     //filter if not to be displayed
     context.save()
     context.translate(loc.x, loc.y)
@@ -238,7 +237,7 @@ const drawNotifiedLocations = (
 ) => {
   store.notifiedLocations
     .filter(({ zoneId }) => zoneId == store.zoneId)
-    .forEach(notifiedLocation => {
+    .forEach((notifiedLocation) => {
       const pos: IPosition = { x: notifiedLocation.x, y: notifiedLocation.y }
       const indices = zone.value?.getEliteLocationIndices(
         notifiedLocation,
@@ -287,7 +286,7 @@ const drawNotifiedLocations = (
           )
           const icon = IconProvider.findIcon(IconId.Flag)
           if (icon && icon.complete && icon.width != 0 && icon.height != 0) {
-              context.globalAlpha = alpha
+            context.globalAlpha = alpha
             context.drawImage(icon, -icon.width / 2, -icon.height / 2)
           }
           context.restore()
@@ -401,7 +400,7 @@ const drawPlayer = (context: CanvasRenderingContext2D) => {
 
 const drawTargets = (context: CanvasRenderingContext2D, alpha: number) => {
   const drawnIndices: number[] = []
-  store.targets.forEach(target => {
+  store.targets.forEach((target) => {
     const pos: IPosition = { x: target.x, y: target.y }
     const indices = zone.value?.getEliteLocationIndices(target, 0x1f, 3.0)
     if (indices && indices.length > 0) {
@@ -574,13 +573,13 @@ const drawFrame = (context: CanvasRenderingContext2D, timestamp: number) => {
     context.restore()
     pc.endMeasure('total')
   }
-  window.requestAnimationFrame(timestamp => drawFrame(context, timestamp))
+  window.requestAnimationFrame((timestamp) => drawFrame(context, timestamp))
 }
 
 const drawCanvas = async () => {
   if (canvas.value) {
     const context = canvas.value.getContext('2d')
-    window.requestAnimationFrame(timestamp => drawFrame(context!, timestamp))
+    window.requestAnimationFrame((timestamp) => drawFrame(context!, timestamp))
   }
 }
 
@@ -639,7 +638,7 @@ const border = computed<IRect>(() => {
       left: left,
       top: top,
       right: left + width,
-      bottom: top + height,
+      bottom: top + height
     }
   } catch {
     return { left: 0, top: 0, right: 0, bottom: 0 }
@@ -647,7 +646,7 @@ const border = computed<IRect>(() => {
 })
 
 const onResize = () => {
-//  canvasSize.value = document.documentElement.clientWidth
+  //  canvasSize.value = document.documentElement.clientWidth
   //canvasSize.value = window.innerWidth;
   const clientWidth =
     document.querySelector<HTMLElement>('div.main')!.clientWidth
@@ -680,14 +679,14 @@ const getEdgePosition = (
     distance: Math.sqrt(
       (target.x - self.x) * (target.x - self.x) * 2500 +
         (target.y - self.y) * (target.y - self.y) * 2500
-    ),
+    )
   }
   if (target.x < rect.left) {
     points.push({
       x: rect.left,
       y:
         self.y -
-        ((self.x - rect.left) * (self.y - target.y)) / (self.x - target.x),
+        ((self.x - rect.left) * (self.y - target.y)) / (self.x - target.x)
     })
   }
   if (target.y < rect.top) {
@@ -695,7 +694,7 @@ const getEdgePosition = (
       x:
         self.x -
         ((self.y - rect.top) * (self.x - target.x)) / (self.y - target.y),
-      y: rect.top,
+      y: rect.top
     })
   }
   if (target.x > rect.right) {
@@ -703,7 +702,7 @@ const getEdgePosition = (
       x: rect.right,
       y:
         ((rect.right - self.x) * (target.y - self.y)) / (target.x - self.x) +
-        self.y,
+        self.y
     })
   }
   if (target.y > rect.bottom) {
@@ -711,7 +710,7 @@ const getEdgePosition = (
       x:
         ((rect.bottom - self.y) * (target.x - self.x)) / (target.y - self.y) +
         self.x,
-      y: rect.bottom,
+      y: rect.bottom
     })
   }
   const point =
@@ -765,10 +764,14 @@ const getEdgePosition = (
         <!-- <performance-counter></performance-counter> -->
         {{ store.dump }}
       </div>
-      <div id="fieldInstance" 
+      <div
+        id="fieldInstance"
         v-if="store.instance > 0"
-        :style="{ color: textColor }">
-        <span class="material-icons-outlined md-48">{{store.instanceIcon}}</span>
+        :style="{ color: textColor }"
+      >
+        <span class="material-icons-outlined md-48">{{
+          store.instanceIcon
+        }}</span>
       </div>
       <!--div id="specifiedLocation">
         <location-map></location-map>

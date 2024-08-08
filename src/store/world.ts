@@ -1,11 +1,11 @@
-import { defineStore} from 'pinia'
-import { ref, computed } from 'vue'
 import {
   DataCenterRegionId,
   WorldProvider,
   type World,
-  type WorldId,
+  type WorldId
 } from 'ffxiv-lib'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 export const useWorldStore = defineStore(
   'world',
@@ -32,10 +32,10 @@ export const useWorldStore = defineStore(
     return {
       worldId,
       world,
-      setWorldId,
+      setWorldId
     }
   },
   {
-    persist: true,
+    persist: true
   }
 )
