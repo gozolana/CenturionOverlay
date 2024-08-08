@@ -1,9 +1,11 @@
+<script setup lang="ts">
+import MapView from './MapView.vue';
+import MenuBar from './MenuBar.vue';
+import MobSelectHeader from './MobSelectHeader.vue';
+</script>
+
 <template>
-    <div>Status Bar</div>
-    <div>Map Header</div>
-    <div>Map</div>
+    <MenuBar/>
+    <MobSelectHeader/>
+    <MapView/>
 </template>
-
-<style lang="scss" scoped>
-
-</style>

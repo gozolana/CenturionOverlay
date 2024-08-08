@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue';
-import Overlay from './components/Overlay.vue';
+import Main from './components/Main.vue';
 import { useOverlay } from './composables/useOverlay';
 const { load, disconnect } = useOverlay()
 onMounted(() => load())
@@ -9,7 +9,7 @@ onBeforeUnmount(() => disconnect())
 
 <template>
 
-  <div class="main"><Overlay/></div>
+  <div class="main"><Main></Main></div>
   <div class="info">
     Notification
   </div>
@@ -29,7 +29,7 @@ body {
 }
 div.main {
   height: calc(100vh);
-  width: calc(100vh - 40px);
+  width: calc(100vh - 66px);
   z-index: 1;
   //background-color: rgb(174, 255, 0);
   position: absolute;

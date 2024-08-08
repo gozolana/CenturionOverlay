@@ -5,7 +5,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { usePerformanceCounter } from '../composables/performanceCounter'
 import { useOverlayStore } from '../store/overlay'
 import { useOverlaySettingsStore } from '../store/overlaySettings'
-import OverlayCanvasHeader from './OverlayCanvasHeader.vue'
+import OverlayCanvasHeader from './MobSelectHeader.vue'
 
 interface IPosition {
   x: number
@@ -652,7 +652,7 @@ const onResize = () => {
   const clientWidth =
     document.querySelector<HTMLElement>('div.main')!.clientWidth
   canvasSize.value = clientWidth
-  resizeIconTop.value = `${clientWidth - 40}px`
+  resizeIconTop.value = `${clientWidth - 66}px`
 }
 
 const getAlphaOfTimestamp = (
@@ -755,7 +755,6 @@ const getEdgePosition = (
 
 <template>
   <div>
-    <overlay-canvas-header></overlay-canvas-header>
     <div id="canvasWrapper">
       <canvas
         ref="canvas"
@@ -769,7 +768,7 @@ const getEdgePosition = (
       <div id="fieldInstance" 
         v-if="store.instance > 0"
         :style="{ color: textColor }">
-        <span class="material-icons-outlined">filter_{{store.instance}}</span>
+        <span class="material-icons-outlined md-48">{{store.instanceIcon}}</span>
       </div>
       <!--div id="specifiedLocation">
         <location-map></location-map>
@@ -832,12 +831,15 @@ canvas {
   position: absolute;
   font-family: monospace;
   font-weight: bold;
-  font-size: 24px;
   color: #330000ff;
+  font-size: 36px;
   top: 6px;
   right: 6px;
-  height: 300px;
 }
+#fieldInstance > span {
+  font-size: 36px;
+}
+
 #fieldInstanceWarning {
   position: absolute;
   font-family: monospace;

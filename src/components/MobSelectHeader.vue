@@ -29,8 +29,8 @@ const zone = computed(() =>
       :class="{ 'brightness-50': !displayB }" v-model="displayB"  
       >{{MessageProvider.getBNpcName(zone.elite.bIds[0])}}</ToggleButton>
     </div>
-    <div v-if="zone.ss">
-      <ToggleButton class="w-full h-full truncate text-white bg-gray-700" 
+          <div v-if="zone.ss">
+      <ToggleButton class="w-full   h-full truncate text-white bg-gray-700" 
       :class="{ 'brightness-50': !displaySS }" v-model="displaySS" 
       >{{ MessageProvider.getBNpcName(zone.ss.sId) }}</ToggleButton>
     </div>
