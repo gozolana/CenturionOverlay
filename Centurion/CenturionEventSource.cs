@@ -1061,7 +1061,7 @@ namespace Centurion
 
             public bool CanBeRemoved
             {
-                get => (combatant.CurrentHP == 0 || (float)combatant.EffectiveDistance > 100);
+                get => combatant.CurrentHP == 0 || (float)combatant.EffectiveDistance > 100;
             }
 
             public void Update(DateTime utcTime, Combatant target)
@@ -1145,7 +1145,7 @@ namespace Centurion
             public IEnumerable<CenturionMob> Mobs { get => mobs; }
 
             // PC と NPC の合計数が 5 Interval 連続で 150 を超えていた
-            public bool IsCrowded { get => (crowdedCount >= 5); }
+            public bool IsCrowded { get => crowdedCount >= 5; }
 
             public void Update(DateTime utcDateTime, IList<Combatant> allCombatants)
             {
