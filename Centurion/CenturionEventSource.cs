@@ -825,7 +825,7 @@ namespace Centurion
             {
                 logger.Log(LogLevel.Error, "DispatchPlayerLoggedInEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(eventObject));
+            DispatchAndCacheEvent(JObject.FromObject(eventObject));
             logger.Log(LogLevel.Info, $"PlayerLoggedIn: {player.Name}@{player.WorldName}");
         }
 
@@ -846,7 +846,7 @@ namespace Centurion
             {
                 logger.Log(LogLevel.Error, "DispatchPlayerLoggedOutEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(eventObject));
+            DispatchAndCacheEvent(JObject.FromObject(eventObject));
             logger.Log(LogLevel.Info, $"PlayerLoggedOut: {player.Name}@{player.WorldName}");
         }
 
@@ -864,7 +864,7 @@ namespace Centurion
             {
                 logger.Log(LogLevel.Error, "DispatchZoneChangedEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(eventObject));
+            DispatchAndCacheEvent(JObject.FromObject(eventObject));
             logger.Log(LogLevel.Info, $"ZoneChanged: {WORLDID_WORLDNAME_MAP[worldId]}({worldId}) - {zoneName}({zoneId})");
         }
 
@@ -881,7 +881,7 @@ namespace Centurion
             {
                 logger.Log(LogLevel.Error, "DispatchZoneInstanceChangedEvent: {0}", ex);
             }
-            DispatchEvent(JObject.FromObject(eventObject));
+            DispatchAndCacheEvent(JObject.FromObject(eventObject));
             logger.Log(LogLevel.Info, $"ZoneInstanceChanged: {zoneName} {instance}");
         }
 
