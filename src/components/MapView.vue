@@ -237,7 +237,7 @@ const drawNotifiedLocations = (
 ) => {
   store.notifiedLocations
     .filter(({ zoneId }) => zoneId == store.zoneId)
-    .forEach((notifiedLocation) => {
+    .forEach((notifiedLocation, i) => {
       const pos: IPosition = { x: notifiedLocation.x, y: notifiedLocation.y }
       const indices = zone.value?.getEliteLocationIndices(
         notifiedLocation,
@@ -284,6 +284,10 @@ const drawNotifiedLocations = (
             factor.value / settingsStore.scale,
             factor.value / settingsStore.scale
           )
+          if (i == 0) {
+            // 最新のNotificationだったら1.5倍
+            context.scale(1.5, 1.5)
+          }
           const icon = IconProvider.findIcon(IconId.Flag)
           if (icon && icon.complete && icon.width != 0 && icon.height != 0) {
             context.globalAlpha = alpha
