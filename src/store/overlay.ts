@@ -100,6 +100,7 @@ export const useOverlayStore = defineStore('overlay', () => {
         nearMobLocationIndex: indices.length > 0 ? indices[0] : -1,
         timestamp: new Date(event.timestamp).getTime()
       })
+      notifiedLocations.value.sort((a, b) => b.timestamp - a.timestamp)
     } else {
       //console.debug('ignore NotifiedLocation');
     }
