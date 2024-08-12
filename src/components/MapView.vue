@@ -652,10 +652,10 @@ const border = computed<IRect>(() => {
 const onResize = () => {
   //  canvasSize.value = document.documentElement.clientWidth
   //canvasSize.value = window.innerWidth;
-  const clientWidth =
-    document.querySelector<HTMLElement>('div.main')!.clientWidth
+  const clientWidth = document.documentElement.clientHeight - 72
+  //  document.querySelector<HTMLElement>('div.main')!.clientWidth
   canvasSize.value = clientWidth
-  resizeIconTop.value = `${clientWidth - 66}px`
+  resizeIconTop.value = `${clientWidth - 72}px`
 }
 
 const getAlphaOfTimestamp = (

@@ -1,19 +1,34 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue';
-import Main from './components/Main.vue';
-import { useOverlay } from './composables/useOverlay';
+import { onBeforeUnmount, onMounted } from 'vue'
+import Main from './components/Main.vue'
+import TopBar from './components/TopBar.vue'
+import WindowsBorders from './components/WindowBorders.vue'
+import { useOverlay } from './composables/useOverlay'
 const { load, disconnect } = useOverlay()
-onMounted(() => load())
+onMounted(async () => {
+  load()
+  /*  
+const url = 'http://localhost:3001/api/mob-locations/134/types/elite'
+  const res = await fetch(url)
+  console.log(await res.json())
+  */
+})
 onBeforeUnmount(() => disconnect())
 </script>
 
 <template>
-
-  <div class="main"><Main></Main></div>
-  <div class="info">
-    Notification
+  <div class="relative h-full w-full">
+    <div class="info"></div>
+    <WindowsBorders class="z-40 h-screen w-screen"></WindowsBorders>
+    <div
+      class="absolute right-0 top-6 z-50 h-[calc(100vh_-_1.5rem)] w-[calc(100vh_-_4.5rem)]"
+    >
+      <Main></Main>
+    </div>
+    <div class="absolute right-0 top-0 z-50 h-6 w-[calc(100vh_-_4.5rem)]">
+      <TopBar></TopBar>
+    </div>
   </div>
-  <div class="handle"></div>
 </template>
 
 <style lang="scss">
@@ -22,18 +37,11 @@ html {
 }
 body {
   overflow: hidden;
+  min-width: 100px;
+  min-height: 100px;
   margin: 0;
   z-index: 0;
-  background-color: white;
-  position: relative;
-}
-div.main {
-  height: calc(100vh);
-  width: calc(100vh - 66px);
-  z-index: 1;
-  //background-color: rgb(174, 255, 0);
-  position: absolute;
-  right: 0px;
+  background-color: transparent;
 }
 div.info {
   position: absolute;
@@ -43,18 +51,7 @@ div.info {
   width: 200px;
   margin: 20px;
 
-  z-index: 2;
-  background-color: transparent;
-}
-div.handle {
-  position: relative;
-  bottom: 0px;
-  z-index: -1;
-  background-color: transparent;
-  height: calc(100vh);
-  width: calc(100vw);
-  background-image: url(/handle.png);
-  background-position: bottom right;
-  background-repeat: no-repeat;
+  z-index: 4;
+  background-color: rgba($color: #000000, $alpha: 0.001);
 }
 </style>
