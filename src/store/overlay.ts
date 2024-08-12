@@ -44,6 +44,8 @@ export const useOverlayStore = defineStore('overlay', () => {
   const notifiedLocations = ref<INotifiedLocation[]>([])
   const lastNotifiedLocation = ref<IMapLocation>({ zoneId: 0, x: 0, y: 0 })
 
+  const showBorder = ref<boolean>(true)
+
   const instanceIcon = computed(() =>
     instance.value > 0 ? `filter_${instance.value}` : null
   )
@@ -173,6 +175,7 @@ export const useOverlayStore = defineStore('overlay', () => {
     instanceIcon,
     notifiedLocations,
     lastNotifiedLocation,
+    showBorder,
     onPlayerLoggedIn,
     onPlayerLoggedOut,
     onZoneChanged,

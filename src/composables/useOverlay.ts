@@ -100,12 +100,12 @@ export const useOverlay = () => {
         if (zone && mob) {
           const [x, y, z] = zone.toLocalPosXYZ(ev)
           console.log(`posting ${mobId} at Zone(${zoneId})(${x}, ${y}, ${z})`)
-          // can't send CORS
+          // for collecting locations info internally
           /*
-          const url = `https://centurion.ffxiv.mydns.jp/api/mob-locations/${zoneId}`
+          const url = `http://localhost:3001/api/mob-locations/${zoneId}`
           try {
             await fetch(url, {
-              method: 'POST',
+              method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -165,6 +165,10 @@ export const useOverlay = () => {
     window.addOverlayListener('CenturionCombatData', async (ev) =>
       store.onCombatData(ev)
     )
+    // not implemented yet
+    // window.addOverlayListener('CenturionFateEvent', async (ev: IFateEvent) =>
+    //   console.log(ev)
+    // )
 
     window.startOverlayEvents()
     window.callOverlayHandler({

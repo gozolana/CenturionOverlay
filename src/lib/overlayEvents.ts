@@ -208,6 +208,12 @@ interface ICombatDataEvent extends ICenturionEvent {
   isCrowded: boolean
 }
 
+interface IFateEvent extends ICenturionEvent {
+  fateId: number
+  status: string
+  percentage: number
+}
+
 const DEFAULT_PLAYER: ICharacter = {
   jobId: 0,
   level: 0,
@@ -239,6 +245,7 @@ export { DEFAULT_PLAYER, toCharacter }
 export type {
   ICharacter,
   ICombatDataEvent,
+  IFateEvent,
   ILocationNotifiedEvent,
   IMobFAEvent,
   IMobLocationEvent,
