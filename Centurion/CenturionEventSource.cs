@@ -131,9 +131,12 @@ namespace Centurion
         private const string CenturionMobLocationEvent = "CenturionMobLocationEvent";
         // モブ含むキャラデータ
         private const string CenturionCombatData = "CenturionCombatData";
+        // FATEの発生・更新・消滅
+        private const string CenturionFateStateChangedEvent = "CenturionFateStateChangedEvent";
 
         // 現在のプレイヤーのCombatant
         private Combatant currentPlayer = null;
+        private Combatant lastValidPlayer = null;
 
         // 現在のプレイヤーが居るZone
         private CenturionZone currentZone = null;
@@ -175,6 +178,7 @@ namespace Centurion
                  CenturionMobStateChangedEvent,
                  CenturionMobLocationEvent,
                  CenturionCombatData,
+                 CenturionFateStateChangedEvent,
             });
 
             // These events need to deliver cached values to new subscribers.
@@ -328,6 +332,7 @@ namespace Centurion
                 currentPlayer = repository.GetCombatants().FirstOrDefault(c => c.type == 1);
                 if (currentPlayer != null)
                 {
+                    lastValidPlayer = currentPlayer;
                     disconnectStartTime = null;
                     // ログアウト状態でログインに必要な情報(currentPlayerとdestinationZoneId)が揃っていたらログインに切り替える
                     if (currentZone == null)
@@ -347,7 +352,7 @@ namespace Centurion
                         var elapsedTime = currentTime - (DateTime)disconnectStartTime;
                         if (elapsedTime.TotalSeconds > 3)
                         {
-                            DispatchPlayerLoggedOutEvent(currentTime, currentPlayer, currentZone);
+                            DispatchPlayerLoggedOutEvent(currentTime, lastValidPlayer, currentZone);
                             destinationZoneId = 0;
                             destinationZoneName = "";
                             currentPlayer = null;
@@ -416,6 +421,11 @@ namespace Centurion
             {
                 LogMessageType lineType = (LogMessageType)args.detectedType;
                 var line = args.originalLogLine.Split('|');
+
+                if (args.originalLogLine.StartsWith("258|"))
+                {
+                    Log(LogLevel.Info, $"{args.detectedType} {args.detectedZone} {args.originalLogLine}");
+                }
 
                 switch (lineType)
                 {
@@ -500,6 +510,9 @@ namespace Centurion
                                 ValidateLocationNotified(utcNow, logMessageChatType, line);
                                 break;
                         }
+                        break;
+                    case LogMessageType.FateDirector:
+                        DispatchFateStateChangedEvent(utcNow, line[2], Convert.ToUInt32(line[4], 16), Convert.ToUInt32(line[5], 16));
                         break;
                 }
             }
@@ -808,6 +821,16 @@ namespace Centurion
             // public List<PosCombatant> others;
         }
 
+        [Serializable]
+        internal class CenturionFateStateChangedObject
+        {
+            public string type = CenturionFateStateChangedEvent;
+            public string timestamp;
+            public string state; // Add, Change, Remove
+            public uint fateId;
+            public uint progress; // only for change state
+        }
+
         internal void DispatchPlayerLoggedInEvent(DateTime utcDateTime, Combatant player, uint zoneId, string zoneName)
         {
             var eventObject = new CenturionPlayerLoggedInObject();
@@ -835,10 +858,10 @@ namespace Centurion
             try
             {
                 eventObject.timestamp = utcDateTime.ToString("s") + "Z";
-                eventObject.playerId = player.ID;
-                eventObject.playerName = player.Name;
-                eventObject.playerWorldId = player.WorldID;
-                eventObject.worldId = player.CurrentWorldID;
+                eventObject.playerId = player != null ? player.ID : 0;
+                eventObject.playerName = player != null ? player.Name : "";
+                eventObject.playerWorldId = player != null ? player.WorldID : 0;
+                eventObject.worldId = player != null ? player.CurrentWorldID : 0;
                 eventObject.zoneId = zone.ZoneId;
                 eventObject.zoneName = zone.ZoneName;
             }
@@ -994,6 +1017,23 @@ namespace Centurion
             }
             DispatchEvent(JObject.FromObject(mobLocation));
             logger.Log(LogLevel.Info, $"MobLocation: {zone.ZoneId} {combatant.BNpcNameID}");
+        }
+
+        internal void DispatchFateStateChangedEvent(DateTime utcDateTime, string state, uint fateId, uint progress)
+        {
+            var stateChanged = new CenturionFateStateChangedObject();
+            try
+            {
+                stateChanged.timestamp = utcDateTime.ToString("s") + "Z";
+                stateChanged.state = state;
+                stateChanged.fateId = fateId;
+                stateChanged.progress = progress;
+            }
+            catch (Exception ex)
+            {
+                logger.Log(LogLevel.Error, "FateStateChangedEvent: {0}", ex);
+            }
+            DispatchEvent(JObject.FromObject(stateChanged));
         }
 
         private bool IsPartyMember(Combatant combatant)

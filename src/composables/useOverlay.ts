@@ -1,6 +1,7 @@
 import { MobProvider, TMobRank, ZoneProvider } from 'ffxiv-lib'
 import { ref } from 'vue'
 import type {
+  IFateEvent,
   IMobFAEvent,
   IMobLocationEvent,
   IMobStateChangedEvent,
@@ -165,10 +166,9 @@ export const useOverlay = () => {
     window.addOverlayListener('CenturionCombatData', async (ev) =>
       store.onCombatData(ev)
     )
-    // not implemented yet
-    // window.addOverlayListener('CenturionFateEvent', async (ev: IFateEvent) =>
-    //   console.log(ev)
-    // )
+    window.addOverlayListener('CenturionFateStateChangedEvent', async (ev: IFateEvent) =>
+      store.onFateStateChanged(ev)
+    )
 
     window.startOverlayEvents()
     window.callOverlayHandler({

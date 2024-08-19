@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { IconId, TImageSize, TMapImage, ZoneProvider } from 'ffxiv-lib'
+import {
+  FateProvider,
+  IconId,
+  TImageSize,
+  TMapImage,
+  ZoneProvider
+} from 'ffxiv-lib'
 import { IconProvider } from 'ffxiv-lib/plugin'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { usePerformanceCounter } from '../composables/performanceCounter'
 import { useOverlayStore } from '../store/overlay'
-import { useOverlaySettingsStore } from '../store/overlaySettings'
+import { DisplayMode, useOverlaySettingsStore } from '../store/overlaySettings'
 
 interface IPosition {
   x: number
@@ -402,6 +408,39 @@ const drawPlayer = (context: CanvasRenderingContext2D) => {
   context.restore()
 }
 
+const drawFates = (context: CanvasRenderingContext2D, _: number) => {
+  Object.entries(store.fateStatus).forEach(([fateId, progress]) => {
+    const fate = FateProvider.findFate(Number(fateId))
+    if (fate && fate.zoneId == zone.value?.id) {
+      const { x, y } = fate
+      const icon = IconProvider.findIcon(fate.icon)
+      if (icon) {
+        context.save()
+        context.translate(x, y)
+
+        context.scale(
+          factor.value / settingsStore.scale,
+          factor.value / settingsStore.scale
+        )
+        context.drawImage(icon, -icon.width / 2, -icon.height / 2)
+        if (progress > 0) {
+          context.translate(0.0, -20.0)
+          context.strokeStyle = `#000000ff`
+          context.fillStyle = 'green'
+          context.fillRect(-23, -8, 46, 16)
+          context.font = '12px sans-serif'
+          context.textAlign = 'center'
+          context.fillStyle = 'white'
+          context.fillText(`${progress}%`, 0, 4)
+        }
+        context.restore()
+      } else {
+        console.log('icon not loaded', fate.icon)
+      }
+    }
+  })
+}
+
 const drawTargets = (context: CanvasRenderingContext2D, alpha: number) => {
   const drawnIndices: number[] = []
   store.targets.forEach((target) => {
@@ -563,6 +602,10 @@ const drawFrame = (context: CanvasRenderingContext2D, timestamp: number) => {
     pc.startMeasure('drawPartyMembers')
     drawPartyMembers(context)
     pc.endMeasure('drawPartyMembers')
+
+    if (settingsStore.displayMode == DisplayMode.Fate) {
+      drawFates(context, alphaOfTimestamp)
+    }
 
     // Playerキャラクター(アイコン,視認範囲)
     pc.startMeasure('drawPlayer')

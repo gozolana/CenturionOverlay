@@ -209,9 +209,9 @@ interface ICombatDataEvent extends ICenturionEvent {
 }
 
 interface IFateEvent extends ICenturionEvent {
+  state: string
   fateId: number
-  status: string
-  percentage: number
+  progress: number
 }
 
 const DEFAULT_PLAYER: ICharacter = {

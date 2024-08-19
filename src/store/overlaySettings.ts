@@ -16,6 +16,13 @@ interface MapSettings {
   opacity: number
 }
 
+export const DisplayMode = {
+  MobHunt: 0,
+  Fate: 1,
+  Gathering: 2
+} as const
+type DisplayMode = (typeof DisplayMode)[keyof typeof DisplayMode]
+
 export const useOverlaySettingsStore = defineStore(
   'overlaySettings',
   () => {
@@ -44,6 +51,8 @@ export const useOverlaySettingsStore = defineStore(
       type: TMapImage.Default,
       opacity: 1.0
     })
+
+    const displayMode = ref<DisplayMode>(DisplayMode.MobHunt)
 
     // 表示オプション
     const displayUpDown = ref(false)
@@ -97,6 +106,7 @@ export const useOverlaySettingsStore = defineStore(
       //preferredLanguage,
       language,
       showHeader,
+      displayMode,
       scale,
       map,
       mapTypeCandidates,

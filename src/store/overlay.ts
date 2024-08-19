@@ -5,6 +5,7 @@ import { useInterval } from '../composables/useInterval'
 import type {
   ICharacter,
   ICombatDataEvent,
+  IFateEvent,
   ILocationNotifiedEvent,
   IPlayerLoggedInEvent,
   IPlayerLoggedOutEvent,
@@ -46,6 +47,8 @@ export const useOverlayStore = defineStore('overlay', () => {
 
   const showBorder = ref<boolean>(true)
 
+  const fateStatus = ref<Record<number, number>>([])
+
   const instanceIcon = computed(() =>
     instance.value > 0 ? `filter_${instance.value}` : null
   )
@@ -69,6 +72,9 @@ export const useOverlayStore = defineStore('overlay', () => {
     //    instance.value =
     //      fieldInstanceStore.getInstanceCount(event.zoneId) == 1 ? 1 : 0
     instance.value = 0
+
+    // clear old cache
+    //fateStatus.value = {}
   }
 
   const onZoneInstanceChanged = async (event: IZoneInstanceChangedEvent) => {
@@ -115,6 +121,17 @@ export const useOverlayStore = defineStore('overlay', () => {
     targets.value = event.targets.map((c) => toCharacter(c, zone))
 
     updateNotifiedLocations()
+  }
+
+  const onFateStateChanged = async (event: IFateEvent) => {
+    if (event.state == 'Update') {
+      fateStatus.value[event.fateId] = event.progress
+    } else if (event.state == 'Remove') {
+      delete fateStatus.value[event.fateId]
+    } else if (event.state == 'Add' && !fateStatus.value[event.fateId]) {
+      // fates that are not started will not trigger update event
+      fateStatus.value[event.fateId] = event.progress // always 0
+    }
   }
 
   const dump = computed(() => {
@@ -176,12 +193,14 @@ export const useOverlayStore = defineStore('overlay', () => {
     notifiedLocations,
     lastNotifiedLocation,
     showBorder,
+    fateStatus,
     onPlayerLoggedIn,
     onPlayerLoggedOut,
     onZoneChanged,
     onZoneInstanceChanged,
     onLocationNotified,
     onCombatData,
+    onFateStateChanged,
     dump
   }
 })
